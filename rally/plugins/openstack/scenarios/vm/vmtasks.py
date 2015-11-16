@@ -16,6 +16,7 @@
 import json
 
 from rally.common import log as logging
+from rally.common import sshutils
 from rally import consts
 from rally import exceptions
 from rally.plugins.openstack import scenario
@@ -204,3 +205,36 @@ class VMTasks(vm_utils.VMScenario):
 
         return self.boot_runcommand_delete(
             image=self.context["tenant"]["custom_image"]["id"], **kwargs)
+
+    @types.set(image=types.ImageResourceType,
+               flavor=types.FlavorResourceType)
+    @validation.number("port", minval=1, maxval=65535, nullable=True,
+                       integer_only=True)
+    @validation.external_network_exists("floating_network")
+    @validation.image_valid_on_flavor("flavor", "image")
+    @validation.required_contexts("network")
+    @validation.required_services(consts.Service.NOVA)
+    @validation.required_openstack(users=True)
+    @scenario.configure(context={"cleanup": ["nova"], "keypair": {},
+                                 "allow_ssh": {}})
+    def boot_and_delete_server_test_ssh(self, image, flavor,
+                                        username,
+                                        password=None,
+                                        command=None,
+                                        port=22,
+                                        use_floating_ip=True,
+                                        floating_network=None,
+                                        force_delete=False,
+                                        **kwargs):
+        server, fip = self._boot_server_with_fip(
+            image, flavor, use_floating_ip=use_floating_ip,
+            floating_network=floating_network,
+            key_name=self.context["user"]["keypair"]["name"],
+            **kwargs)
+
+        pkey = self.context["user"]["keypair"]["private"]
+        ssh = sshutils.SSH(username, fip["ip"], port=port,
+                           pkey=pkey, password=password)
+        self._wait_for_ssh(ssh)
+
+        self._delete_server_with_fip(server, fip, force_delete=force_delete)
