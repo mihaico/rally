@@ -60,6 +60,43 @@ class NovaServers(utils.NovaScenario,
         self._boot_server(image, flavor, **kwargs)
         self._list_servers(detailed)
 
+    @types.set(image=types.ImageResourceType,
+               flavor=types.FlavorResourceType)
+    @validation.image_valid_on_flavor("flavor", "image")
+    @validation.required_services(consts.Service.NOVA)
+    @validation.required_openstack(users=True)
+    @scenario.configure(context={"cleanup": ["nova"]})
+    def boot_and_check_console_log_server(self, image, flavor,
+                                          detailed=True, **kwargs):
+        """Boot a server from an image and then list all servers.
+
+        Measure the "nova list" command performance.
+
+        If you have only 1 user in your context, you will
+        add 1 server on every iteration. So you will have more
+        and more servers and will be able to measure the
+        performance of the "nova list" command depending on
+        the number of servers owned by users.
+
+        :param image: image to be used to boot an instance
+        :param flavor: flavor to be used to boot an instance
+        :param detailed: True if the server listing should contain
+                         detailed information about all of them
+        :param kwargs: Optional additional arguments for server creation
+        """
+        server = self._boot_server(image, flavor, **kwargs)
+        console_log = self.clients("nova").servers.get_console_output
+        retries = 0
+
+        while console_log(server.id) == '' and retries < 20:
+            retries = retries + 1
+            self.sleep_between(1, 1)
+            if retries == 19:
+                raise Exception("Timeout waiting for the console!")
+        print console_log(server.id)[0:50]
+
+        # self._delete_server(server, force=False)
+
     @validation.required_services(consts.Service.NOVA)
     @validation.required_openstack(users=True)
     @scenario.configure(context={"cleanup": ["nova"]})
