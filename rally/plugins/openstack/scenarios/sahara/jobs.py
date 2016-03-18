@@ -123,3 +123,55 @@ class SaharaJob(utils.SaharaScenario):
 
             LOG.debug("Starting Job sequence")
             self.create_launch_job_sequence(jobs)
+
+    @scenario.configure(context={"cleanup": ["sahara"]})
+    def create_launch_job_on_cluster(self, job_type, configs, cluster_id,
+                                     job_idx=0):
+        mains = self.context["tenant"]["sahara_mains"]
+        libs = self.context["tenant"]["sahara_libs"]
+
+        name = self.generate_random_name()
+        job = self.clients("sahara").jobs.create(name=name,
+                                                 type=job_type,
+                                                 description="",
+                                                 mains=mains,
+                                                 libs=libs)
+
+        if job_type.lower() == "java":
+            input_id = None
+            output_id = None
+        else:
+            input_id = self.context["tenant"]["sahara_input"]
+            output_id = self._create_output_ds().id
+
+        self._run_job_execution(job_id=job.id,
+                                cluster_id=cluster_id,
+                                input_id=input_id,
+                                output_id=output_id,
+                                configs=configs,
+                                job_idx=job_idx)
+
+    @validation.required_services(consts.Service.SAHARA)
+    @validation.required_contexts("users", "sahara_image",
+                                  "sahara_job_binaries")
+    @scenario.configure(context={"cleanup": ["sahara"]})
+    def create_launch_jobs_on_diff_clusters(self, jobs,
+                                            cluster_configs):
+        image_id = self.context["tenant"]["sahara_image"]
+
+        cluster = self._launch_cluster(
+            plugin_name=cluster_configs["plugin_name"],
+            hadoop_version=cluster_configs["hadoop_version"],
+            flavor_id=cluster_configs["flavor_id"],
+            image_id=image_id,
+            workers_count=cluster_configs["workers_count"],
+            auto_security_group=cluster_configs["auto_security_group"])
+
+        for idx, job in enumerate(jobs):
+            LOG.debug("Launching Job. Sequence #%d" % idx)
+            self.create_launch_job_on_cluster(job["job_type"],
+                                              job["configs"],
+                                              cluster.id,
+                                              idx)
+
+        self._delete_cluster(cluster)
