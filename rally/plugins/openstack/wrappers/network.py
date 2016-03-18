@@ -331,8 +331,8 @@ class NeutronWrapper(NetworkWrapper):
                     "ip_version": self.SUBNET_IP_VERSION,
                     "cidr": self._generate_cidr(),
                     "enable_dhcp": True,
-                    "dns_nameservers": kwargs.get("dns_nameservers",
-                                                  ["8.8.8.8", "8.8.4.4"])
+                    # "dns_nameservers": kwargs.get("dns_nameservers",
+                    #                               ["8.8.8.8", "8.8.4.4"])
                 }
             }
             subnet = self.client.create_subnet(subnet_args)["subnet"]
