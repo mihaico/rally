@@ -255,27 +255,32 @@ class VMScenario(nova_utils.NovaScenario, cinder_utils.CinderScenario):
         proc.wait()
         LOG.debug("Host %s is ICMP %s"
                   % (host, proc.returncode and "down" or "up"))
-        return ICMP_UP_STATUS if (proc.returncode == 0) else ICMP_DOWN_STATUS
+        return (Host.ICMP_UP_STATUS if (proc.returncode == 0)
+                else Host.ICMP_DOWN_STATUS)
 
     @atomic.action_timer("vm.wait_for_ping")
     def _wait_for_ping_windows(self, server_ip):
-        server_ip = netaddr.IPAddress(server_ip)
-        utils.wait_for(
-            server_ip,
-            is_ready=utils.resource_is(ICMP_UP_STATUS, self._ping_ip_address),
+        server = Host(server_ip)
+        utils.wait_for_status(
+            server,
+            ready_statuses=[Host.ICMP_UP_STATUS],
+            update_resource=Host.update_status,
             timeout=CONF.benchmark.vm_ping_timeout,
             check_interval=CONF.benchmark.vm_ping_poll_interval
         )
-        utils.wait_for(
-            server_ip,
-            is_ready=utils.resource_is(ICMP_DOWN_STATUS,
-                                       self._ping_ip_address),
+        LOG.debug("Server is up, waiting to be down...")
+        utils.wait_for_status(
+            server,
+            ready_statuses=[Host.ICMP_DOWN_STATUS],
+            update_resource=Host.update_status,
             timeout=CONF.benchmark.vm_ping_timeout,
             check_interval=CONF.benchmark.vm_ping_poll_interval
         )
-        utils.wait_for(
-            server_ip,
-            is_ready=utils.resource_is(ICMP_UP_STATUS, self._ping_ip_address),
+        LOG.debug("Server is down, waiting to be up...")
+        utils.wait_for_status(
+            server,
+            ready_statuses=[Host.ICMP_UP_STATUS],
+            update_resource=Host.update_status,
             timeout=CONF.benchmark.vm_ping_timeout,
             check_interval=CONF.benchmark.vm_ping_poll_interval
         )
@@ -285,7 +290,8 @@ class VMScenario(nova_utils.NovaScenario, cinder_utils.CinderScenario):
         server_ip = netaddr.IPAddress(server_ip)
         utils.wait_for(
             server_ip,
-            is_ready=utils.resource_is(ICMP_UP_STATUS, self._ping_ip_address),
+            is_ready=utils.resource_is(Host.ICMP_UP_STATUS,
+                                       self._ping_ip_address),
             timeout=CONF.benchmark.vm_ping_timeout,
             check_interval=CONF.benchmark.vm_ping_poll_interval
         )
