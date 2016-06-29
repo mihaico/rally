@@ -35,8 +35,9 @@ PYTHON=${PYTHON2:-$PYTHON3}
 BASE_PIP_URL=${BASE_PIP_URL:-"https://pypi.python.org/simple"}
 VIRTUALENV_191_URL="https://raw.github.com/pypa/virtualenv/1.9.1/virtualenv.py"
 
-RALLY_GIT_URL="https://git.openstack.org/openstack/rally"
-RALLY_GIT_BRANCH="master"
+VENV_DIR="~/rally_virtual_env"
+RALLY_GIT_URL="https://github.com/alinbalutoiu/rally"
+RALLY_GIT_BRANCH="master_updated"
 RALLY_CONFIGURATION_DIR=/etc/rally
 RALLY_DATABASE_DIR=/var/lib/rally/database
 DBTYPE=sqlite
