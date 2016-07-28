@@ -58,7 +58,8 @@ class WinrmClient(object):
             rs = winrm.Response(
                 self._conn.get_command_output(shell_id, command_id))
             if rs.status_code != 0:
-                raise Exception(rs)
+                raise Exception(
+                    "%s %s %s" % (rs.status_code, rs.std_err, rs.std_out))
             else:
                 return rs
         return None
